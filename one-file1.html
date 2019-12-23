@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset=utf-8 />
+    <title>Demo</title>
+
+    <meta name='viewport' content='width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no' />
+
+<!--Add Leaflet.js -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css"
+   integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ=="
+   crossorigin=""/>
+   <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js"
+   integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew=="
+   crossorigin=""></script>
+<!--Add draw plugin -->
+    <link rel='stylesheet' href='https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css' />
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js'></script>
+
+    <!-- <link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.css" />
+    <script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@latest/dist/leaflet-geoman.min.js"></script> -->
+    
+    <script src="https://unpkg.com/togeojson@0.16.0"></script>
+	<script src="https://unpkg.com/leaflet-filelayer@1.2.0"></script>
+
+<!-- Load Esri Leaflet from CDN -->
+	  <script src="https://unpkg.com/esri-leaflet@2.3.2/dist/esri-leaflet.js"
+	  integrity="sha512-6LVib9wGnqVKIClCduEwsCub7iauLXpwrd5njR2J507m3A2a4HXJDLMiSZzjcksag3UluIfuW1KzuWVI5n/cuQ=="
+	  crossorigin=""></script>
+
+
+<!-- Load Esri Leaflet Geocoder from CDN -->
+  <link rel="stylesheet" href="https://unpkg.com/esri-leaflet-geocoder@2.3.2/dist/esri-leaflet-geocoder.css"
+    integrity="sha512-IM3Hs+feyi40yZhDH6kV8vQMg4Fh20s9OzInIIAc4nx7aMYMfo+IenRUekoYsHZqGkREUgx0VvlEsgm7nCDW9g=="
+    crossorigin="">
+  <script src="https://unpkg.com/esri-leaflet-geocoder@2.3.2/dist/esri-leaflet-geocoder.js"
+    integrity="sha512-8twnXcrOGP3WfMvjB0jS5pNigFuIWj4ALwWEgxhZ+mxvjF5/FBPVd5uAxqT8dd2kUmTVK9+yQJ4CmTmSg/sXAQ=="
+    crossorigin=""></script>
+
+    <!-- routing -->
+   <!--  <link rel="stylesheet" href="leaflet-routing-machine.css" />
+    <script src="leaflet-routing-machine.js"></script> -->
+
+<!-- adding jquery bootstrap-->
+	  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+	  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css">
+	  
+	  <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+	  <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.4.1/js/bootstrap.min.js"></script>
+
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+        }
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
+            z-index: -1;
+        }
+        #delete, #export {
+            position: absolute;
+            top:400px;
+            left:10px;
+            z-index:100;
+            background:red;
+            color:black;
+            padding:6px;
+            border-radius:4px;
+            font-family: 'Helvetica Neue';
+            cursor: pointer;
+            font-size:12px;
+            text-decoration:none;
+        }
+        #export {
+            top:440px;
+            background:green;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id='map'></div>
+    <div id='delete'>Delete Features</div>
+    <a href='#' id='export'>Export Features</a>
+
+
+    <div class="modal" id="attributes">
+	  <div class="modal-dialog">
+	    <div class="modal-content">
+	      <div class="modal-header">
+	        <h4 class="modal-title">Attribute Data</h4>
+	      </div>
+	      <div class="modal-body">
+	       
+
+			<div  class="content-scroll5">
+
+				<div class="col-xs-2">
+			  		<label for="ex1">Name</label>
+			  		<input class="form-control" name="name" id="name" type="text">
+			  		<label for="ex1">Category</label>
+			  		<input class="form-control" name="category" id="category" type="text">
+
+				</div>
+	      	</div>
+	      	<div class="modal-footer">
+	        	<button type="button" class="btn btn-default" data-dismiss="modal">OK</button>
+	      	</div>
+	      </div>
+	  	</div>
+	  </div>
+	</div>
+    
+
+    <script>
+        var map = L.map('map').fitWorld();
+        var drawnItems = L.featureGroup().addTo(map);
+
+        // Add layers to the map
+        L.control.layers({
+            'Satellite Map': L.tileLayer('http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                detectRetina: true
+            }).addTo(map),
+            'Terrain Map': L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                detectRetina: true
+            })}, { 'Drawn Items': drawnItems}, { position: 'topleft', collapsed: false }).addTo(map);
+
+
+      /*  var airports = L.WFS({
+		    url: 'http://localhost:8080/geoserver/msr/ows',
+		    typeNS: 'msr',
+		    typeName: 'airports',
+		    crs: L.CRS.EPSG4326,
+		    style: {
+		        color: 'blue',
+		        weight: 2
+		    	}
+			}).addTo(map)
+		        .on('load', function () {
+		            map.fitBounds(boundaries);
+		        })*/
+
+        //routing  ....https://www.liedman.net/leaflet-routing-machine/#getting-started
+   /*     L.Routing.control({
+		    waypoints: [
+		        L.latLng(57.74, 11.94),
+		        L.latLng(57.6792, 11.949)
+		    ],
+		    routeWhileDragging: true,
+		    geocoder: L.Control.Geocoder.nominatim()
+		}).addTo(map);
+
+		function createButton(label, container) {
+		    var btn = L.DomUtil.create('button', '', container);
+		    btn.setAttribute('type', 'button');
+		    btn.innerHTML = label;
+		    return btn;
+		}
+
+		map.on('click', function(e) {
+		    var container = L.DomUtil.create('div'),
+		        startBtn = createButton('Start from this location', container),
+		        destBtn = createButton('Go to this location', container);
+
+		    L.popup()
+		        .setContent(container)
+		        .setLatLng(e.latlng)
+		        .openOn(map);
+		});
+
+		    L.DomEvent.on(startBtn, 'click', function() {
+		        control.spliceWaypoints(0, 1, e.latlng);
+		        map1.closePopup();
+		    });
+
+		L.DomEvent.on(destBtn, 'click', function() {
+        	control.spliceWaypoints(control.getWaypoints().length - 1, 1, e.latlng);
+        	map1.closePopup();
+    	});*/
+
+
+//geocoding
+          var searchControl = L.esri.Geocoding.geosearch({position:'topright', expanded:true, collapseAfterResult: false}).addTo(map);
+
+		  var results = L.layerGroup().addTo(map);
+
+		  searchControl.on('results', function (data) {
+		    results.clearLayers();
+		    for (var i = data.results.length - 1; i >= 0; i--) {
+		      results.addLayer(L.marker(data.results[i].latlng));
+		    }
+		  });
+
+
+// import dataa
+         var style = {
+            color: 'red',
+            opacity: 1.0,
+            fillOpacity: 1.0,
+            weight: 2,
+            clickable: false
+        };
+        L.Control.FileLayerLoad.LABEL = '<img class="icon" src="folder1.png" alt="file icon"/>';
+        control = L.Control.fileLayerLoad({
+            fitBounds: true,
+            layerOptions: {
+                style: style,
+                pointToLayer: function (data, latlng) {
+                    return L.circleMarker(
+                        latlng,
+                        { style: style }
+                    );
+                }
+            }
+        });
+        control.addTo(map);
+        control.loader.on('data:loaded', function (e) {
+            var layer = e.layer;
+            console.log(layer);
+        });
+
+        
+
+
+// editing tools
+        map.addControl(new L.Control.Draw({
+                edit: {
+                    featureGroup: drawnItems,
+                poly: {
+                        allowIntersection: false,
+                        showLength: true
+                    }
+                },
+                draw: {
+                    polygon: {
+                        allowIntersection: false,
+                        shapeOptions: {
+                            color: '#97009c'
+                          }
+                    },
+                    rectangle: false,
+                    marker: false
+                }
+                
+            }));
+
+
+        map.on('draw:created', function(e) {
+        	var layer = e.layer,
+        	feature = layer.feature = layer.feature || {};
+
+		    feature.type = feature.type || "Feature";
+		    var props = feature.properties = feature.properties || {};
+		    props.name = null;
+		    props.category = null;
+		    drawnItems.addLayer(layer);
+		    addPopup(layer);
+		});
+
+		function addPopup(layer) {
+		  var content = document.getElementById("name");
+		    /*content.addEventListener("keyup", function () {
+		      layer.feature.properties.name = content.value;
+		    });*/
+		    layer.on("click", function () {
+		    	$('#attributes').modal({'show' : true, backdrop:'static', keyboard:false});
+		    	$('#name').val(layer.feature.properties.name);
+		    	$('#category').val(layer.feature.properties.category);
+		      /*content.value = layer.feature.properties.desc;
+		      content.focus();*/
+		    });
+		    //layer.bindPopup(content).openPopup();
+		}
+        	/*drawnItems.addLayer(e.layer);
+        	});*/
+        	/*var layer = e.layer,
+        	feature = layer.feature = layer.feature || {};
+        	feature.type = feature.type || "Feature";
+        	var props = feature.properties = feature.properties || {};
+        	props.action = null;
+
+            // Each time a feaute is created, it's added to the over arching feature group
+            drawnItems.addLayer(layer);
+            addPopup(layer);
+        });
+
+        function addPopup(layer){
+        	var content = '<form name="myform" role="form" id="form" enctype="multipart/form-data" class = "form-horizontal" onsubmit="addMarker()">'+
+            //datetime
+            '<div class="form-group">'+
+                '<label class="control-label col-sm-5"><strong>timedate question<br></strong></label>'+
+                '<input type="datetime-local" placeholder="Required" id="datetime" name="datetime" class="form-control"/>'+ 
+            '</div>'+
+
+            //time to search parking
+            '<div class="form-group">'+
+                '<label class="control-label col-sm-5"><strong>how long question<br></strong></label>'+
+                '<input type="number" min="0" max="120" placeholder="Required" class="form-control" id="parktime" name="parktime">'+
+            '</div>'+
+
+            //likert familiarity of parking area
+            '<div class="row">'+
+                '<label class="control-label col-sm-5"><strong>area question</strong></label>'+
+                '<div class="small-3 column">'+
+                    '<ul class="likert" onclick="myfunction()">'+
+                        '<li><input value="1" id="likert" name="likert" type="radio">area very frequently</li>'+
+                        '<li><input value="2" id="likert" name="likert" type="radio">area frequently</li>'+
+                        '<li><input value="3" id="likert" name="likert" type="radio">area sometimes</li>'+
+                        '<li><input value="4" id="likert" name="likert" type="radio">area seldomly</li>'+
+                        '<li><input value="5" id="likert" name="likert" type="radio">area never</li>'+
+                    '</ul>'+
+                '</div>'+
+            '</div>'+
+
+            //type of parking spot
+            '<div class="form-group">'+
+                '<label for="parkspot">Parkspot question<br></label>'+
+                '<select id="parkspot" name="parkspot" onclick="myfunction()">'+
+                    '<option disabled selected value> -- select an option -- </option>'+
+                    '<option value="3" name="parkspot" label="parkspot1"></option>'+
+                    '<option value="2" name="parkspot" label="parkspot2 (parkkipaikka)"></option>'+
+                    '<option value="3" name="parkspot" label="parkspot3"></option>'+
+                    '<option value="4" name="parkspot" label="parkspot4"></option>'+
+                '</select>'+ 
+            '</div>'+
+
+            //text box for testing
+            '<div class="form-group">'+
+                'testing: <input type="text" placeholder="Required" id="testtext" name="testtext">'+
+            '</div>'+
+
+            //submit button
+            '<button id="button-submit" type="button">Save Changes</button>'+
+        '</form>';
+        }*/
+
+
+        // on click, clear all layers
+        document.getElementById('delete').onclick = function(e) {
+            drawnItems.clearLayers();
+        }
+
+        document.getElementById('export').onclick = function(e) {
+            // Extract GeoJson from featureGroup
+            var data = drawnItems.toGeoJSON();
+
+            // Stringify the GeoJson
+            var convertedData = 'text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(data));
+
+            // Create export
+            document.getElementById('export').setAttribute('href', 'data:' + convertedData);
+            document.getElementById('export').setAttribute('download','data.geojson');
+        }
+
+
+    </script>
+
+</body>
+
+</html>
